@@ -1,0 +1,46 @@
+# Бинарные файлы
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go специфичные файлы
+/bin/
+/dist/
+/vendor/
+
+# Кэш Go
+/.cache/
+
+# Конфиги с чувствительными данными
+.env
+.env.local
+.env*.local
+
+# Локальные БД  
+*.db
+*.sqlite
+*.sqlite3
+
+# Логи приложений
+*.log
+logs/
+
+# Временные файлы
+/tmp/
+/temp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Миграции (если генерируются автоматически)
+/migrations/*.sql
+!/migrations/*.up.sql
+!/migrations/*.down.sql

@@ -1,0 +1,50 @@
+run:
+  timeout: 5m
+  modules-download-mode: vendor
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  goimports:
+    local-prefixes: auth-service
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+
+linters:
+  disable-all: true
+  enable:
+    # Стандартные линтеры
+    - gofmt
+    - goimports
+    - govet
+    - staticcheck
+    
+    # Дополнительные полезные линтеры
+    - gosimple
+    - unused
+    - ineffassign
+    - misspell
+    - gocyclo
+    - goconst
+    
+    # Стиль кода
+    - gocritic
+    - bodyclose
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - dupl
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
