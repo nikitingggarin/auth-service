@@ -4,8 +4,12 @@ import (
 	"context"
 	"log"
 
+	"auth-service/internal/auth"
 	"auth-service/internal/config"
+	"auth-service/internal/handler"
+	"auth-service/internal/middleware"
 	"auth-service/internal/repository/postgres"
+	"auth-service/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -36,9 +40,18 @@ func main() {
 
 	log.Println("✅ Database connection established")
 
+	// Инициализация JWT сервиса
+	jwtService := auth.NewJWTService(cfg.JWTSecret, cfg.JWTExpiration)
+
+	// Инициализация репозиториев и сервисов
+	userRepo := postgres.NewUserRepository(dbPool)
+	authService := service.NewAuthService(userRepo, jwtService)
+	authHandler := handler.NewAuthHandler(authService)
+
 	// Создание Gin роутера
 	r := gin.Default()
 
+	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"status":  "OK",
@@ -46,6 +59,20 @@ func main() {
 			"port":    cfg.ServerPort,
 		})
 	})
+
+	// Auth routes
+	authGroup := r.Group("/auth")
+	{
+		authGroup.POST("/register", authHandler.Register)
+		authGroup.POST("/login", authHandler.Login)
+	}
+
+	// Protected routes (require JWT token)
+	protectedGroup := r.Group("/api")
+	protectedGroup.Use(middleware.AuthMiddleware(jwtService))
+	{
+		protectedGroup.GET("/profile", authHandler.GetProfile)
+	}
 
 	log.Printf("🚀 Server starting on :%s...", cfg.ServerPort)
 	if err := r.Run(":" + cfg.ServerPort); err != nil {

@@ -89,3 +89,31 @@ func (r *UserRepository) UserExists(ctx context.Context, email string) (bool, er
 
 	return exists, nil
 }
+
+// GetUserByID получает пользователя по ID
+func (r *UserRepository) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
+	var user models.User
+
+	query := `
+		SELECT id, email, password_hash, created_at, updated_at
+		FROM users 
+		WHERE id = $1
+	`
+
+	err := r.db.QueryRow(ctx, query, userID).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by ID: %w", err)
+	}
+
+	return &user, nil
+}
