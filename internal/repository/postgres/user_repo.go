@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,6 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Доменные ошибки
+var (
+	ErrUserNotFound = errors.New("user not found")
 )
 
 type UserRepository struct {
@@ -67,8 +73,8 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 		&user.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
-		return nil, nil
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrUserNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
@@ -88,4 +94,32 @@ func (r *UserRepository) UserExists(ctx context.Context, email string) (bool, er
 	}
 
 	return exists, nil
+}
+
+// GetUserByID получает пользователя по ID
+func (r *UserRepository) GetUserByID(ctx context.Context, userID string) (*models.User, error) {
+	var user models.User
+
+	query := `
+		SELECT id, email, password_hash, created_at, updated_at
+		FROM users 
+		WHERE id = $1
+	`
+
+	err := r.db.QueryRow(ctx, query, userID).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrUserNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by ID: %w", err)
+	}
+
+	return &user, nil
 }
