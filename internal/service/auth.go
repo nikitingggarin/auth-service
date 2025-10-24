@@ -4,18 +4,18 @@ import (
 	"context"
 	"errors"
 
-	"auth-service/internal/auth"
 	"auth-service/internal/models"
 	"auth-service/internal/repository/postgres"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
-	userRepo   *postgres.UserRepository
-	jwtService *auth.JWTService
+	userRepo   UserRepository
+	jwtService JWTService
 }
 
-func NewAuthService(userRepo *postgres.UserRepository, jwtService *auth.JWTService) *AuthService {
+func NewAuthService(userRepo UserRepository, jwtService JWTService) *AuthService {
 	return &AuthService{
 		userRepo:   userRepo,
 		jwtService: jwtService,
@@ -81,10 +81,10 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest) (*Aut
 	// Получаем пользователя по email
 	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
+		if errors.Is(err, postgres.ErrUserNotFound) {
+			return nil, errors.New("invalid email or password")
+		}
 		return nil, err
-	}
-	if user == nil {
-		return nil, errors.New("invalid email or password")
 	}
 
 	// Проверяем пароль
@@ -109,9 +109,6 @@ func (s *AuthService) GetProfile(ctx context.Context, userID string) (*models.Us
 	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
-	}
-	if user == nil {
-		return nil, errors.New("user not found")
 	}
 
 	return user, nil

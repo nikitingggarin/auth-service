@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"auth-service/internal/models"
@@ -9,11 +10,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AuthHandler struct {
-	authService *service.AuthService
+// AuthService интерфейс для работы с аутентификацией
+type AuthService interface {
+	Register(ctx context.Context, req *models.CreateUserRequest) (*service.AuthResponse, error)
+	Login(ctx context.Context, req *models.LoginRequest) (*service.AuthResponse, error)
+	GetProfile(ctx context.Context, userID string) (*models.User, error)
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+type AuthHandler struct {
+	authService AuthService
+}
+
+func NewAuthHandler(authService AuthService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 	}

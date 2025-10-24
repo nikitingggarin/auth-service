@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,6 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Доменные ошибки
+var (
+	ErrUserNotFound = errors.New("user not found")
 )
 
 type UserRepository struct {
@@ -67,8 +73,8 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 		&user.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
-		return nil, nil
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrUserNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
@@ -108,8 +114,8 @@ func (r *UserRepository) GetUserByID(ctx context.Context, userID string) (*model
 		&user.UpdatedAt,
 	)
 
-	if err == pgx.ErrNoRows {
-		return nil, nil
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrUserNotFound
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by ID: %w", err)
