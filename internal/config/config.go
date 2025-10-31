@@ -8,7 +8,6 @@ import (
 type Config struct {
 	ServerPort    string
 	DBURL         string
-	RedisURL      string
 	JWTSecret     string
 	JWTExpiration time.Duration
 }
@@ -17,7 +16,6 @@ func Load() *Config {
 	return &Config{
 		ServerPort:    getEnv("SERVER_PORT", "8080"),
 		DBURL:         getEnv("DB_URL", "postgres://postgres:password@localhost:5432/auth_service"),
-		RedisURL:      getEnv("REDIS_URL", "localhost:6379"),
 		JWTSecret:     getEnv("JWT_SECRET", "default-secret-key-change-in-production"),
 		JWTExpiration: 24 * time.Hour, // 24 часа
 	}
