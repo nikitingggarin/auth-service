@@ -3,7 +3,12 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"auth-service/internal/auth"
 	"auth-service/internal/config"
@@ -35,9 +40,9 @@ func maskDBURL(dbURL string) string {
 }
 
 func main() {
-	// Загрузка .env файла с явным указанием пути
-	if err := godotenv.Load("C:/projects_Go/auth-service/.env"); err != nil {
-		log.Printf("Failed to load .env file: %v", err)
+	// Загрузка .env файла
+	if err := godotenv.Load(); err != nil {
+		log.Printf("⚠️ Failed to load .env file: %v", err)
 		log.Println("Using default configuration")
 	} else {
 		log.Println("✅ .env file loaded successfully")
@@ -82,6 +87,18 @@ func main() {
 		})
 	})
 
+	// Concurrency test endpoint
+	r.GET("/concurrent", func(c *gin.Context) {
+		// Симулируем тяжелую операцию (например, сложный запрос к БД)
+		time.Sleep(2 * time.Second)
+
+		c.JSON(200, gin.H{
+			"message":      "Concurrent request processed",
+			"time":         time.Now().Format(time.RFC3339),
+			"goroutine_id": getGoroutineID(), // Покажем ID горутины
+		})
+	})
+
 	// Auth routes
 	authGroup := r.Group("/auth")
 	{
@@ -96,8 +113,35 @@ func main() {
 		protectedGroup.GET("/profile", authHandler.GetProfile)
 	}
 
-	log.Printf("🚀 Server starting on :%s...", cfg.ServerPort)
-	if err := r.Run(":" + cfg.ServerPort); err != nil {
-		log.Fatal("Failed to start server:", err)
+	// Создаем HTTP сервер с настройками
+	srv := &http.Server{
+		Addr:    ":" + cfg.ServerPort,
+		Handler: r,
 	}
+
+	// Запускаем сервер в отдельной goroutine
+	go func() {
+		log.Printf("🚀 Server starting on :%s...", cfg.ServerPort)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// Канал для сигналов OS
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	// Ждем сигнал завершения
+	<-quit
+	log.Println("🛑 Shutting down server...")
+
+	// Graceful shutdown с таймаутом 30 секунд
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("✅ Server exited properly")
 }
